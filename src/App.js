@@ -1,7 +1,11 @@
 import React from 'react';
+import Board from './Board';
 
 export const App = () => (
-    <h1>Checkers</h1>
+    <div>
+        <h1>Checkers</h1>
+        <Board />
+    </div>
 );
 
 export default App;
