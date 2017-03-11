@@ -11,6 +11,10 @@
                 padding-top: 100%;
                 float: left;
             }
+
+            &.playable {
+                border: 2px dotted yellow;
+            }
         }
 
         .cell { background: #ddd; }
