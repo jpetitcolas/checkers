@@ -1,0 +1,22 @@
+.board {
+    max-width: 800px;
+    .row {
+        display: flex;
+
+        .cell {
+            flex: 1 0 0;
+            &:before { /* adjust height according to width */
+                content: '';
+                display: block;
+                padding-top: 100%;
+                float: left;
+            }
+        }
+
+        .cell { background: #ddd; }
+        &:nth-child(even) .cell:nth-child(even),
+        &:nth-child(odd) .cell:nth-child(odd) {
+            background: gray;
+        }
+    }
+}
