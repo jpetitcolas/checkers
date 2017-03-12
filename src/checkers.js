@@ -18,12 +18,12 @@ const getCellValue = (board, x, y) => {
         return null;
     }
 
-    return board[x][y];
+    return board[y][x];
 };
 
 const getPostCapturePosition = (currentPlayer, board, x, y, direction) => {
     // do not capture our own men
-    const capturedManColor = board[x + direction[0]][y + direction[1]];
+    const capturedManColor = board[y + direction[1]][x + direction[0]];
     if (capturedManColor === currentPlayer) {
         return;
     }
@@ -31,19 +31,17 @@ const getPostCapturePosition = (currentPlayer, board, x, y, direction) => {
     const postBattlePosition = [x + 2 * direction[0], y + 2 * direction[1]];
     const postCapturePosition = getCellValue(board, ...postBattlePosition);
     if (postCapturePosition === EMPTY_CELL) {
-        return postBattlePosition;
+        return {
+            capture: true,
+            position: postBattlePosition,
+        };
     }
 };
 
-export const getPlayablePositions = (board, x, y) => {
+export const getPlayablePositions = (board, forwardDirection, x, y) => {
     const playablePositions = [];
 
-    [
-        [x - 1, y - 1],
-        [x + 1, y - 1],
-        [x - 1, y + 1],
-        [x + 1, y + 1],
-    ].forEach(coordinates => {
+    [[x - 1, y + forwardDirection], [x + 1, y + forwardDirection]].forEach(coordinates => {
         const adjacentValue = getCellValue(board, coordinates[0], coordinates[1]);
 
         // outside from board
@@ -51,15 +49,18 @@ export const getPlayablePositions = (board, x, y) => {
             return;
         }
 
-        // near diagnoal empty cell: that's playable!
+        // // near diagnoal empty cell: that's playable!
         if (adjacentValue === EMPTY_CELL) {
-            playablePositions.push([...coordinates]);
+            playablePositions.push({
+                capture: false,
+                position: [...coordinates],
+            });
             return;
         }
 
         // ennemy spotted? let's check if we can engage battle!
         const postCapturePosition = getPostCapturePosition(
-            board[x][y],
+            board[y][x],
             board,
             x, y,
             [coordinates[0] - x, coordinates[1] - y],
@@ -71,4 +72,28 @@ export const getPlayablePositions = (board, x, y) => {
     });
 
     return playablePositions;
+};
+
+export const getAllPlayablePositions = (board, player) => {
+    let playablePositions = [];
+
+    const forwardDirection = player === PLAYER_1 ? 1 : -1;
+
+    const length = board.length;
+    for (const y = 0 ; y < length ; y++) {
+        for (const x = 0 ; x < length ; x++) {
+            if (getCellValue(board, x, y) !== player) {
+                continue;
+            }
+
+            playablePositions = playablePositions.concat(getPlayablePositions(board, forwardDirection, x, y));
+        }
+    }
+
+    const captureMoves = playablePositions.filter(pp => pp.capture);
+    if (captureMoves.length) {
+        return captureMoves.map(m => m.position);
+    }
+
+    return playablePositions.map(m => m.position);
 };
