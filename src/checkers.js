@@ -21,25 +21,49 @@ const getCellValue = (board, x, y) => {
     return board[y][x];
 };
 
-const getPostCapturePosition = (currentPlayer, board, x, y, direction) => {
-    // do not capture our own men
-    const capturedManColor = board[y + direction[1]][x + direction[0]];
-    if (capturedManColor === currentPlayer) {
-        return;
+export const getPostCapturePositions = (board, x, y) => {
+    const currentPlayer = getCellValue(board, x, y);
+    if (currentPlayer === EMPTY_CELL || !currentPlayer) {
+        return [];
     }
 
-    const postBattlePosition = [x + 2 * direction[0], y + 2 * direction[1]];
-    const postCapturePosition = getCellValue(board, ...postBattlePosition);
-    if (postCapturePosition === EMPTY_CELL) {
-        return {
-            capture: true,
-            position: postBattlePosition,
-        };
-    }
+    const forwardDirection = currentPlayer === PLAYER_1 ? 1 : -1;
+    const postCapturePositions = [[x - 1, y + forwardDirection], [x + 1, y + forwardDirection]].map(([captureX, captureY]) => {
+        const capturedManColor = getCellValue(board, captureX, captureY);
+        if (capturedManColor === null || capturedManColor === currentPlayer || capturedManColor === EMPTY_CELL) {
+            return;
+        }
+
+        const postCaptureX = captureX + (captureX - x);
+        const postCaptureY = captureY + forwardDirection;
+
+        const postCaptureValue = getCellValue(board, postCaptureX, postCaptureY);
+        if (postCaptureValue !== EMPTY_CELL) {
+            return;
+        }
+
+        const postCaptureBoard = [...board];
+        postCaptureBoard[y][x] = EMPTY_CELL;
+        postCaptureBoard[captureY][captureX] = EMPTY_CELL;
+        postCaptureBoard[postCaptureY][postCaptureX] = currentPlayer;
+
+        const nextCapturePositions = getPostCapturePositions(postCaptureBoard, postCaptureX, postCaptureY);
+
+        if (!nextCapturePositions.length) {
+            return [postCaptureX, postCaptureY];
+        }
+
+        return nextCapturePositions[0];
+    });
+
+    return postCapturePositions.filter(p => p);
 };
 
-export const getPlayablePositions = (board, forwardDirection, x, y) => {
-    const playablePositions = [];
+export const getPlayablePositions = (board, x, y) => {
+    let playablePositions = [];
+
+    const player = getCellValue(board, x, y);
+    const forwardDirection = player === PLAYER_1 ? 1 : -1;
 
     [[x - 1, y + forwardDirection], [x + 1, y + forwardDirection]].forEach(coordinates => {
         const adjacentValue = getCellValue(board, coordinates[0], coordinates[1]);
@@ -51,7 +75,7 @@ export const getPlayablePositions = (board, forwardDirection, x, y) => {
 
         // // near diagnoal empty cell: that's playable!
         if (adjacentValue === EMPTY_CELL) {
-            playablePositions.push({
+            playablePositions = playablePositions.concat({
                 capture: false,
                 position: [...coordinates],
             });
@@ -59,15 +83,14 @@ export const getPlayablePositions = (board, forwardDirection, x, y) => {
         }
 
         // ennemy spotted? let's check if we can engage battle!
-        const postCapturePosition = getPostCapturePosition(
-            board[y][x],
-            board,
-            x, y,
-            [coordinates[0] - x, coordinates[1] - y],
-        );
-
-        if (postCapturePosition) {
-            playablePositions.push(postCapturePosition);
+        const postCapturePositions = getPostCapturePositions(board, x, y);
+        if (postCapturePositions && postCapturePositions.length) {
+            postCapturePositions.forEach(postCapturePosition => {
+                playablePositions.push({
+                    capture: true,
+                    position: [...postCapturePosition],
+                });
+            });
         }
     });
 
@@ -77,16 +100,15 @@ export const getPlayablePositions = (board, forwardDirection, x, y) => {
 export const getAllPlayablePositions = (board, player) => {
     let playablePositions = [];
 
-    const forwardDirection = player === PLAYER_1 ? 1 : -1;
-
     const length = board.length;
-    for (const y = 0 ; y < length ; y++) {
-        for (const x = 0 ; x < length ; x++) {
+    for (const x = 0 ; x < length ; x++) {
+        for (const y = 0 ; y < length ; y++) {
             if (getCellValue(board, x, y) !== player) {
                 continue;
             }
 
-            playablePositions = playablePositions.concat(getPlayablePositions(board, forwardDirection, x, y));
+            const newPlayablePositions = getPlayablePositions(board, x, y);
+            playablePositions = playablePositions.concat(newPlayablePositions);
         }
     }
 
